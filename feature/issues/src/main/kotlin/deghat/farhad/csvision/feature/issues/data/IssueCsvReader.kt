@@ -16,13 +16,17 @@ internal class IssueCsvReader(
             recordNumber++
         }
 
-        val fields = parser.readRecord() ?: return null
-        recordNumber++
-        require(fields.size == expectedHeader.size) {
-            "Expected ${expectedHeader.size} fields in record $recordNumber, got ${fields.size}."
-        }
+        while (true) {
+            val fields = parser.readRecord() ?: return null
+            recordNumber++
+            if (fields.size == 1 && fields[0].isEmpty()) continue
 
-        return mapper.map(fields, recordNumber)
+            require(fields.size == expectedHeader.size) {
+                "Expected ${expectedHeader.size} fields in record $recordNumber, got ${fields.size}."
+            }
+
+            return mapper.map(fields, recordNumber)
+        }
     }
 
     private companion object {

@@ -51,6 +51,23 @@ class IssueCsvReaderTest {
     }
 
     @Test
+    fun skipsBlankRecordsAndPreservesRecordNumbers() {
+        for (lineEnding in listOf("\n", "\r\n", "\r")) {
+            val csv = listOf(header, "", "", theoRecord, "", theoRecord, "", "")
+                .joinToString(lineEnding)
+
+            StringReader(csv).use { reader ->
+                val issues = IssueCsvReader(CsvParser(reader), IssueMapper())
+
+                assertEquals(theo.copy(recordNumber = 4), issues.readIssue())
+                assertEquals(theo.copy(recordNumber = 6), issues.readIssue())
+                assertNull(issues.readIssue())
+                assertNull(issues.readIssue())
+            }
+        }
+    }
+
+    @Test
     fun returnsFirstIssueWithoutReadingRemainingInput() {
         val source = StringReader("$header\n$theoRecord\n")
         val reader = object : Reader() {
