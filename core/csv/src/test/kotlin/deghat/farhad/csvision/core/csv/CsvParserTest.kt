@@ -81,4 +81,16 @@ class CsvParserTest {
             assertEquals("Unterminated quoted field.", error.message)
         }
     }
+
+    @Test
+    fun rejectsQuotesInsideUnquotedFields() {
+        StringReader("Th\"eo,Jansen,5").use { reader ->
+            val parser = CsvParser(reader)
+
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                parser.readRecord()
+            }
+            assertEquals("Unexpected quote in a field.", error.message)
+        }
+    }
 }
