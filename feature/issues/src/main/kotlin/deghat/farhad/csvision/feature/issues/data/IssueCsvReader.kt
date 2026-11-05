@@ -2,6 +2,7 @@ package deghat.farhad.csvision.feature.issues.data
 
 import deghat.farhad.csvision.core.csv.CsvParser
 import deghat.farhad.csvision.feature.issues.data.local.IssueEntity
+import java.time.format.DateTimeParseException
 
 internal class IssueCsvReader(
     private val parser: CsvParser,
@@ -31,6 +32,8 @@ internal class IssueCsvReader(
             try {
                 return mapper.map(fields, recordNumber)
             } catch (_: NumberFormatException) {
+                rejectedRecordCount++
+            } catch (_: DateTimeParseException) {
                 rejectedRecordCount++
             }
         }

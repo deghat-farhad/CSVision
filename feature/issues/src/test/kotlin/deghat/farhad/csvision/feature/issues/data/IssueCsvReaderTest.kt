@@ -183,4 +183,33 @@ class IssueCsvReaderTest {
             }
         }
     }
+
+    @Test
+    fun skipsAndCountsRecordsWithInvalidBirthDates() {
+        val invalidDates = listOf(
+            "not-a-date",
+            "",
+            "1978-02-30T00:00:00",
+            "1978-13-02T00:00:00"
+        )
+
+        for (dateOfBirth in invalidDates) {
+            val invalidRecord = "Theo,Jansen,5,$dateOfBirth,https://example.com/theo.png"
+            val csv = listOf(header, theoRecord, invalidRecord, theoRecord, invalidRecord)
+                .joinToString("\n")
+
+            StringReader(csv).use { reader ->
+                val issues = IssueCsvReader(CsvParser(reader), IssueMapper())
+
+                assertEquals(theo, issues.readIssue())
+                assertEquals(0L, issues.rejectedRecordCount)
+                assertEquals(theo.copy(recordNumber = 4), issues.readIssue())
+                assertEquals(1L, issues.rejectedRecordCount)
+                assertNull(issues.readIssue())
+                assertEquals(2L, issues.rejectedRecordCount)
+                assertNull(issues.readIssue())
+                assertEquals(2L, issues.rejectedRecordCount)
+            }
+        }
+    }
 }
