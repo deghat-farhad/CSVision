@@ -28,7 +28,11 @@ internal class IssueCsvReader(
                 continue
             }
 
-            return mapper.map(fields, recordNumber)
+            try {
+                return mapper.map(fields, recordNumber)
+            } catch (_: NumberFormatException) {
+                rejectedRecordCount++
+            }
         }
     }
 

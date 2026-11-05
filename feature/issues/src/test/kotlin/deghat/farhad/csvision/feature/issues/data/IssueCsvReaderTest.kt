@@ -161,4 +161,26 @@ class IssueCsvReaderTest {
             assertEquals(3L, issues.rejectedRecordCount)
         }
     }
+
+    @Test
+    fun skipsAndCountsRecordsWithInvalidIssueCounts() {
+        for (issueCount in listOf("abc", "", "2147483648", "-2147483649")) {
+            val invalidRecord = "Theo,Jansen,$issueCount,1978-01-02T00:00:00,https://example.com/theo.png"
+            val csv = listOf(header, theoRecord, invalidRecord, theoRecord, invalidRecord)
+                .joinToString("\n")
+
+            StringReader(csv).use { reader ->
+                val issues = IssueCsvReader(CsvParser(reader), IssueMapper())
+
+                assertEquals(theo, issues.readIssue())
+                assertEquals(0L, issues.rejectedRecordCount)
+                assertEquals(theo.copy(recordNumber = 4), issues.readIssue())
+                assertEquals(1L, issues.rejectedRecordCount)
+                assertNull(issues.readIssue())
+                assertEquals(2L, issues.rejectedRecordCount)
+                assertNull(issues.readIssue())
+                assertEquals(2L, issues.rejectedRecordCount)
+            }
+        }
+    }
 }
