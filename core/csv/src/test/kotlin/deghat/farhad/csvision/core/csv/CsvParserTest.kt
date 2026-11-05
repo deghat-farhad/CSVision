@@ -1,5 +1,6 @@
 package deghat.farhad.csvision.core.csv
 
+import java.io.Reader
 import java.io.StringReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -15,6 +16,24 @@ class CsvParserTest {
             assertEquals(listOf("Theo", "Jansen", "5"), parser.readRecord())
             assertEquals(listOf("Fiona", "de Vries", "7"), parser.readRecord())
             assertNull(parser.readRecord())
+        }
+    }
+
+    @Test
+    fun returnsFirstRecordWithoutReadingRemainingInput() {
+        val source = StringReader("Theo,Jansen,5\n")
+        val reader = object : Reader() {
+            override fun read(buffer: CharArray, offset: Int, length: Int): Int {
+                val count = source.read(buffer, offset, length)
+                check(count != -1) { "The parser read beyond the first record." }
+                return count
+            }
+
+            override fun close() = source.close()
+        }
+
+        reader.use {
+            assertEquals(listOf("Theo", "Jansen", "5"), CsvParser(it).readRecord())
         }
     }
 
