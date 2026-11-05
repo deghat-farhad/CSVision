@@ -8,6 +8,8 @@ internal class IssueCsvReader(
     private val mapper: IssueMapper
 ) {
     private var recordNumber = 0L
+    var rejectedRecordCount = 0L
+        private set
 
     fun readIssue(): IssueEntity? {
         if (recordNumber == 0L) {
@@ -21,8 +23,9 @@ internal class IssueCsvReader(
             recordNumber++
             if (fields.size == 1 && fields[0].isEmpty()) continue
 
-            require(fields.size == expectedHeader.size) {
-                "Expected ${expectedHeader.size} fields in record $recordNumber, got ${fields.size}."
+            if (fields.size != expectedHeader.size) {
+                rejectedRecordCount++
+                continue
             }
 
             return mapper.map(fields, recordNumber)

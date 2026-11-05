@@ -63,6 +63,7 @@ class IssueCsvReaderTest {
                 assertEquals(theo.copy(recordNumber = 6), issues.readIssue())
                 assertNull(issues.readIssue())
                 assertNull(issues.readIssue())
+                assertEquals(0L, issues.rejectedRecordCount)
             }
         }
     }
@@ -135,20 +136,29 @@ class IssueCsvReaderTest {
     }
 
     @Test
-    fun rejectsRecordsWithMissingOrExtraFields() {
-        val records = listOf(
-            "Theo,Jansen,5,1978-01-02T00:00:00" to 4,
-            "$theoRecord,extra" to 6
-        )
+    fun skipsAndCountsRecordsWithMissingOrExtraFields() {
+        val csv = listOf(
+            header,
+            theoRecord,
+            "Theo,Jansen,5,1978-01-02T00:00:00",
+            "$theoRecord,extra",
+            "",
+            theoRecord,
+            "Theo,Jansen"
+        ).joinToString("\n")
 
-        for ((record, fieldCount) in records) {
-            StringReader("$header\n$record").use { reader ->
-                val error = assertThrows(IllegalArgumentException::class.java) {
-                    IssueCsvReader(CsvParser(reader), IssueMapper()).readIssue()
-                }
+        StringReader(csv).use { reader ->
+            val issues = IssueCsvReader(CsvParser(reader), IssueMapper())
 
-                assertEquals("Expected 5 fields in record 2, got $fieldCount.", error.message)
-            }
+            assertEquals(0L, issues.rejectedRecordCount)
+            assertEquals(theo, issues.readIssue())
+            assertEquals(0L, issues.rejectedRecordCount)
+            assertEquals(theo.copy(recordNumber = 6), issues.readIssue())
+            assertEquals(2L, issues.rejectedRecordCount)
+            assertNull(issues.readIssue())
+            assertEquals(3L, issues.rejectedRecordCount)
+            assertNull(issues.readIssue())
+            assertEquals(3L, issues.rejectedRecordCount)
         }
     }
 }
