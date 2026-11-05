@@ -36,4 +36,15 @@ class CsvParserTest {
             assertNull(parser.readRecord())
         }
     }
+
+    @Test
+    fun readsQuotedFieldsContainingNewlines() {
+        StringReader("\"Theo\nTJ\",Jansen,5\r\nFiona,de Vries,7").use { reader ->
+            val parser = CsvParser(reader)
+
+            assertEquals(listOf("Theo\nTJ", "Jansen", "5"), parser.readRecord())
+            assertEquals(listOf("Fiona", "de Vries", "7"), parser.readRecord())
+            assertNull(parser.readRecord())
+        }
+    }
 }
