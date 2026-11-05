@@ -16,4 +16,14 @@ class CsvParserTest {
             assertNull(parser.readRecord())
         }
     }
+
+    @Test
+    fun readsQuotedFieldsContainingCommas() {
+        StringReader("\"Theo, Jr.\",\"Jansen\",\"5\"").use { reader ->
+            val parser = CsvParser(reader)
+
+            assertEquals(listOf("Theo, Jr.", "Jansen", "5"), parser.readRecord())
+            assertNull(parser.readRecord())
+        }
+    }
 }
