@@ -93,4 +93,16 @@ class CsvParserTest {
             assertEquals("Unexpected quote in a field.", error.message)
         }
     }
+
+    @Test
+    fun rejectsCharactersAfterClosingQuote() {
+        StringReader("\"Theo\"x,Jansen,5").use { reader ->
+            val parser = CsvParser(reader)
+
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                parser.readRecord()
+            }
+            assertEquals("Unexpected character after a closing quote.", error.message)
+        }
+    }
 }
