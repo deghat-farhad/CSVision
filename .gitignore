@@ -1,0 +1,15 @@
+# Gradle and Kotlin generated files
+.gradle/
+.kotlin/
+build/
+
+# Local machine and IDE files
+local.properties
+.idea/
+*.iml
+.DS_Store
+
+# Native build and profiling outputs
+.externalNativeBuild/
+.cxx/
+/captures/
