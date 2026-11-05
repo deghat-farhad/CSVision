@@ -3,6 +3,7 @@ package deghat.farhad.csvision.core.csv
 import java.io.StringReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class CsvParserTest {
@@ -66,6 +67,18 @@ class CsvParserTest {
             assertEquals(listOf("Theo", "Jansen", "5"), parser.readRecord())
             assertEquals(listOf("\uFEFFFiona", "de Vries", "7"), parser.readRecord())
             assertNull(parser.readRecord())
+        }
+    }
+
+    @Test
+    fun rejectsUnterminatedQuotedFields() {
+        StringReader("\"Theo,Jansen,5").use { reader ->
+            val parser = CsvParser(reader)
+
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                parser.readRecord()
+            }
+            assertEquals("Unterminated quoted field.", error.message)
         }
     }
 }
