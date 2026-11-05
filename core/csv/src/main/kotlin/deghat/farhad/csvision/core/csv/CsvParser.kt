@@ -44,7 +44,10 @@ class CsvParser(reader: Reader) {
                 }
 
                 '"'.code -> {
-                    require(state == FieldState.START) { "Unexpected quote in a field." }
+                    require(state == FieldState.START || state == FieldState.AFTER_QUOTE) {
+                        "Unexpected quote in a field."
+                    }
+                    if (state == FieldState.AFTER_QUOTE) field.append('"')
                     state = FieldState.QUOTED
                 }
 

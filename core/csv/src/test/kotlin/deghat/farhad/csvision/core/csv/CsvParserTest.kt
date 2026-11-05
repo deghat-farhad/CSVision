@@ -26,4 +26,14 @@ class CsvParserTest {
             assertNull(parser.readRecord())
         }
     }
+
+    @Test
+    fun readsEscapedQuotesInsideQuotedFields() {
+        StringReader("\"Theo \"\"TJ\"\"\",Jansen,5").use { reader ->
+            val parser = CsvParser(reader)
+
+            assertEquals(listOf("Theo \"TJ\"", "Jansen", "5"), parser.readRecord())
+            assertNull(parser.readRecord())
+        }
+    }
 }
