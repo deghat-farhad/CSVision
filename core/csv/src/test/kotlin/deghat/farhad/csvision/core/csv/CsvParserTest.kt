@@ -47,4 +47,14 @@ class CsvParserTest {
             assertNull(parser.readRecord())
         }
     }
+
+    @Test
+    fun preservesEmptyFieldsIncludingTrailingField() {
+        StringReader("Theo,,5,").use { reader ->
+            val parser = CsvParser(reader)
+
+            assertEquals(listOf("Theo", "", "5", ""), parser.readRecord())
+            assertNull(parser.readRecord())
+        }
+    }
 }
