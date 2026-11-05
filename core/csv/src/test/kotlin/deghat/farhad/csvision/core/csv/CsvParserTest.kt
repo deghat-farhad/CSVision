@@ -57,4 +57,15 @@ class CsvParserTest {
             assertNull(parser.readRecord())
         }
     }
+
+    @Test
+    fun ignoresBomOnlyAtStartOfInput() {
+        StringReader("\uFEFF\"Theo\",Jansen,5\r\n\uFEFFFiona,de Vries,7").use { reader ->
+            val parser = CsvParser(reader)
+
+            assertEquals(listOf("Theo", "Jansen", "5"), parser.readRecord())
+            assertEquals(listOf("\uFEFFFiona", "de Vries", "7"), parser.readRecord())
+            assertNull(parser.readRecord())
+        }
+    }
 }

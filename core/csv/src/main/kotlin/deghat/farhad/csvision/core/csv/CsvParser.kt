@@ -5,6 +5,7 @@ import java.io.Reader
 
 class CsvParser(reader: Reader) {
     private val input = PushbackReader(reader, 1)
+    private var atStartOfInput = true
 
     fun readRecord(): List<String>? {
         val fields = mutableListOf<String>()
@@ -13,6 +14,10 @@ class CsvParser(reader: Reader) {
 
         while (true) {
             val character = input.read()
+            if (atStartOfInput) {
+                atStartOfInput = false
+                if (character == '\uFEFF'.code) continue
+            }
             if (character == -1) {
                 require(state != FieldState.QUOTED) { "Unterminated quoted field." }
                 if (fields.isEmpty() && state == FieldState.START) return null
