@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "CSVision"
 include(":app")
 include(":core:csv")
+include(":feature:issues")
