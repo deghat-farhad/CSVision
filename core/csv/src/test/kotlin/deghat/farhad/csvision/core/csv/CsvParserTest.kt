@@ -105,4 +105,42 @@ class CsvParserTest {
             assertEquals("Unexpected character after a closing quote.", error.message)
         }
     }
+
+    @Test
+    fun limitsEachRecordIndependently() {
+        StringReader("Theo\r\nJane\nFiona").use { reader ->
+            val parser = CsvParser(reader, maxRecordChars = 4)
+
+            assertEquals(listOf("Theo"), parser.readRecord())
+            assertEquals(listOf("Jane"), parser.readRecord())
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                parser.readRecord()
+            }
+            assertEquals("Record exceeds the maximum size of 4 characters.", error.message)
+        }
+    }
+
+    @Test
+    fun countsCsvSyntaxAndEmbeddedNewlinesTowardRecordLimit() {
+        StringReader("\"a,\nb\"").use { reader ->
+            val parser = CsvParser(reader, maxRecordChars = 5)
+
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                parser.readRecord()
+            }
+            assertEquals("Record exceeds the maximum size of 5 characters.", error.message)
+        }
+    }
+
+    @Test
+    fun rejectsNonPositiveRecordLimits() {
+        for (limit in listOf(0, -1)) {
+            StringReader("Theo").use { reader ->
+                val error = assertThrows(IllegalArgumentException::class.java) {
+                    CsvParser(reader, maxRecordChars = limit)
+                }
+                assertEquals("Maximum record size must be positive.", error.message)
+            }
+        }
+    }
 }

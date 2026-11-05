@@ -3,14 +3,22 @@ package deghat.farhad.csvision.core.csv
 import java.io.PushbackReader
 import java.io.Reader
 
-class CsvParser(reader: Reader) {
+class CsvParser(
+    reader: Reader,
+    private val maxRecordChars: Int = 1_048_576
+) {
     private val input = PushbackReader(reader, 1)
     private var atStartOfInput = true
+
+    init {
+        require(maxRecordChars > 0) { "Maximum record size must be positive." }
+    }
 
     fun readRecord(): List<String>? {
         val fields = mutableListOf<String>()
         val field = StringBuilder()
         var state = FieldState.START
+        var recordChars = 0
 
         while (true) {
             val character = input.read()
@@ -22,6 +30,13 @@ class CsvParser(reader: Reader) {
                 require(state != FieldState.QUOTED) { "Unterminated quoted field." }
                 if (fields.isEmpty() && state == FieldState.START) return null
                 break
+            }
+
+            if (state == FieldState.QUOTED || (character != '\r'.code && character != '\n'.code)) {
+                require(recordChars < maxRecordChars) {
+                    "Record exceeds the maximum size of $maxRecordChars characters."
+                }
+                recordChars++
             }
 
             if (state == FieldState.QUOTED) {
