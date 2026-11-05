@@ -20,6 +20,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:csv"))
     implementation(libs.androidx.room.common)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     testImplementation(libs.junit)

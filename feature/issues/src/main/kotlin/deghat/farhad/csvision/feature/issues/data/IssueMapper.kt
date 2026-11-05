@@ -3,7 +3,7 @@ package deghat.farhad.csvision.feature.issues.data
 import deghat.farhad.csvision.feature.issues.data.local.IssueEntity
 import java.time.LocalDateTime
 
-class IssueMapper {
+internal class IssueMapper {
     fun map(fields: List<String>, recordNumber: Long): IssueEntity = IssueEntity(
         recordNumber = recordNumber,
         firstName = fields[0],
