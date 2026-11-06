@@ -72,6 +72,7 @@ class DefaultIssueRepositoryTest {
         }
 
         val theoIssue = Issue(
+            recordNumber = 2,
             firstName = "Theo",
             surname = "Jansen",
             issueCount = 5,
@@ -79,12 +80,13 @@ class DefaultIssueRepositoryTest {
             avatarUrl = "https://example.com/theo.png"
         )
         val fionaIssue = Issue(
+            recordNumber = 5,
             firstName = "Fiona",
             surname = "de Vries",
             issueCount = 7,
             dateOfBirth = LocalDate.of(1950, 11, 12),
             avatarUrl = "https://example.com/fiona.png"
         )
-        assertEquals(listOf(theoIssue, fionaIssue, theoIssue), issues)
+        assertEquals(listOf(theoIssue, fionaIssue, theoIssue.copy(recordNumber = 9)), issues)
     }
 }

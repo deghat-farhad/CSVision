@@ -16,6 +16,7 @@ data class IssueEntity(
 )
 
 fun IssueEntity.toDomain(): Issue = Issue(
+    recordNumber = recordNumber,
     firstName = firstName,
     surname = surname,
     issueCount = issueCount,

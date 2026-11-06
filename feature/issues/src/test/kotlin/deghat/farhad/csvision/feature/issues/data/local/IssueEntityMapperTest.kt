@@ -9,6 +9,7 @@ class IssueEntityMapperTest {
     @Test
     fun mapsEntityToDomainIssue() {
         val issue = Issue(
+            recordNumber = 2,
             firstName = "Theo",
             surname = "Jansen",
             issueCount = 5,

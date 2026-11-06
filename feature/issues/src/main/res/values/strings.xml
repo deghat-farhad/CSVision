@@ -1,0 +1,5 @@
+<resources>
+    <string name="issues_title">Issues</string>
+    <string name="issues_count">Issue count: %1$d</string>
+    <string name="issues_date_of_birth">Date of birth: %1$s</string>
+</resources>
