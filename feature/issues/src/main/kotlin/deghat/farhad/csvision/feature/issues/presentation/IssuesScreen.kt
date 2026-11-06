@@ -3,20 +3,28 @@ package deghat.farhad.csvision.feature.issues.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
@@ -30,18 +38,54 @@ import kotlinx.coroutines.flow.flowOf
 fun IssuesRoute(repository: IssueRepository, modifier: Modifier = Modifier) {
     val viewModel: IssuesViewModel = viewModel { IssuesViewModel(repository) }
     val issues = viewModel.issues.collectAsLazyPagingItems()
-    IssuesScreen(issues, modifier)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    IssuesScreen(issues, uiState, viewModel::loadIssues, modifier)
 }
 
 @Composable
-private fun IssuesScreen(issues: LazyPagingItems<IssueUiModel>, modifier: Modifier = Modifier) {
+private fun IssuesScreen(
+    issues: LazyPagingItems<IssueUiModel>,
+    uiState: IssuesUiState,
+    onLoadIssues: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column {
-            Text(
-                text = stringResource(R.string.issues_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.issues_title),
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Button(onClick = onLoadIssues, enabled = !uiState.isLoading) {
+                    val label = when {
+                        uiState.isLoading -> R.string.issues_loading
+                        uiState.loadFailed -> R.string.issues_retry
+                        issues.itemCount > 0 -> R.string.issues_reload
+                        else -> R.string.issues_load
+                    }
+                    Text(stringResource(label))
+                }
+            }
+            if (uiState.isLoading) {
+                val loadingDescription = stringResource(R.string.issues_loading_description)
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                        .semantics { contentDescription = loadingDescription }
+                )
+            }
+            if (uiState.loadFailed) {
+                Text(
+                    text = stringResource(R.string.issues_load_failed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                )
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -91,6 +135,6 @@ private fun IssuesScreenPreview() {
     }.collectAsLazyPagingItems()
 
     MaterialTheme {
-        IssuesScreen(issues)
+        IssuesScreen(issues, IssuesUiState(), onLoadIssues = {})
     }
 }
