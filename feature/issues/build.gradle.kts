@@ -34,7 +34,8 @@ dependencies {
     implementation(project(":core:csv"))
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.paging)
-    implementation(libs.kotlinx.coroutines.core)
+    api(libs.androidx.paging.common)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     ksp(libs.androidx.room.compiler)
@@ -46,4 +47,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.paging.testing)
 }
