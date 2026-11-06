@@ -1,5 +1,6 @@
 package deghat.farhad.csvision.feature.issues.data
 
+import androidx.paging.PagingSource
 import deghat.farhad.csvision.core.csv.CsvParser
 import deghat.farhad.csvision.feature.issues.data.local.IssueDao
 import deghat.farhad.csvision.feature.issues.data.local.IssueEntity
@@ -113,6 +114,10 @@ class IssueRemoteImporterTest {
         override suspend fun insertBatch(issues: List<IssueEntity>) {
             batches.add(issues)
             firstBatchSaved.countDown()
+        }
+
+        override fun pagingSource(): PagingSource<Int, IssueEntity> {
+            error("The importer must not read pages.")
         }
 
         override suspend fun clear() {

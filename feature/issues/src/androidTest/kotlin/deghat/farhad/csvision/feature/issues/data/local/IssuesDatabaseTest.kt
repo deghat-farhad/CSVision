@@ -1,6 +1,7 @@
 package deghat.farhad.csvision.feature.issues.data.local
 
 import android.content.Context
+import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -8,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -72,5 +74,51 @@ class IssuesDatabaseTest {
             assertTrue(cursor.moveToFirst())
             assertEquals(0L, cursor.getLong(0))
         }
+    }
+
+    @Test
+    fun readsPagesInRecordNumberOrder() = runTest {
+        val theo = IssueEntity(
+            recordNumber = 2,
+            firstName = "Theo",
+            surname = "Jansen",
+            issueCount = 5,
+            dateOfBirthEpochDay = 2_923,
+            avatarUrl = "https://example.com/theo.png"
+        )
+        val fiona = IssueEntity(
+            recordNumber = 5,
+            firstName = "Fiona",
+            surname = "de Vries",
+            issueCount = 7,
+            dateOfBirthEpochDay = -6_990,
+            avatarUrl = "https://example.com/fiona.png"
+        )
+        val secondTheo = theo.copy(recordNumber = 9)
+        val dao = database.issueDao()
+        dao.insertBatch(listOf(secondTheo, fiona, theo))
+        val source = dao.pagingSource()
+
+        val firstPage = source.load(
+            PagingSource.LoadParams.Refresh(
+                key = null,
+                loadSize = 2,
+                placeholdersEnabled = false
+            )
+        ) as PagingSource.LoadResult.Page<Int, IssueEntity>
+
+        assertEquals(listOf(theo, fiona), firstPage.data)
+        assertNull(firstPage.prevKey)
+
+        val secondPage = source.load(
+            PagingSource.LoadParams.Append(
+                key = requireNotNull(firstPage.nextKey),
+                loadSize = 2,
+                placeholdersEnabled = false
+            )
+        ) as PagingSource.LoadResult.Page<Int, IssueEntity>
+
+        assertEquals(listOf(secondTheo), secondPage.data)
+        assertNull(secondPage.nextKey)
     }
 }

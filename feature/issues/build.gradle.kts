@@ -33,6 +33,7 @@ room {
 dependencies {
     implementation(project(":core:csv"))
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.paging)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
