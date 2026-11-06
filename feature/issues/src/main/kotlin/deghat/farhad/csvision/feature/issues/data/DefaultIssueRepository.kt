@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 
 internal class DefaultIssueRepository(
     private val dao: IssueDao,
+    private val importCoordinator: IssueImportCoordinator,
     private val pagingConfig: PagingConfig = PagingConfig(
         pageSize = 50,
         enablePlaceholders = false,
@@ -25,4 +26,6 @@ internal class DefaultIssueRepository(
     ).flow.map { pagingData ->
         pagingData.map { entity -> entity.toDomain() }
     }
+
+    override suspend fun reload() = importCoordinator.reload()
 }

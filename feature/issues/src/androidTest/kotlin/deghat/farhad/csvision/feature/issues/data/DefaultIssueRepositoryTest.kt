@@ -55,6 +55,9 @@ class DefaultIssueRepositoryTest {
         dao.insertBatch(listOf(theo.copy(recordNumber = 9), fiona, theo))
         val repository: IssueRepository = DefaultIssueRepository(
             dao = dao,
+            importCoordinator = IssueImportCoordinator(dao) {
+                error("Observing issues must not start an import.")
+            },
             pagingConfig = PagingConfig(
                 pageSize = 2,
                 initialLoadSize = 2,
