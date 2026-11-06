@@ -54,6 +54,38 @@ class IssueBatchImporterTest {
     }
 
     @Test
+    fun preservesCompletedBatchWhenParsingFails() {
+        val dao = RecordingIssueDao()
+        val csv = listOf(
+            "First name,Sur name,Issue count,Date of birth,avatar",
+            "Theo,Jansen,5,1978-01-02T00:00:00,https://example.com/theo.png",
+            "Fiona,de Vries,7,1950-11-12T00:00:00,https://example.com/fiona.png",
+            "Theo,Jansen,5,1978-01-02T00:00:00,https://example.com/theo.png",
+            "\"Unterminated"
+        ).joinToString("\n")
+
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            runTest {
+                val importer = IssueBatchImporter(
+                    dao = dao,
+                    ioDispatcher = StandardTestDispatcher(testScheduler),
+                    batchSize = 2
+                )
+
+                StringReader(csv).use { reader ->
+                    importer.importIssues(IssueCsvReader(CsvParser(reader), IssueMapper()))
+                }
+            }
+        }
+
+        assertEquals("Unterminated quoted field.", error.message)
+        assertEquals(
+            listOf(listOf(2L, 3L)),
+            dao.batches.map { batch -> batch.map { it.recordNumber } }
+        )
+    }
+
+    @Test
     fun rejectsNonPositiveBatchSizes() {
         for (batchSize in listOf(0, -1)) {
             val error = assertThrows(IllegalArgumentException::class.java) {
