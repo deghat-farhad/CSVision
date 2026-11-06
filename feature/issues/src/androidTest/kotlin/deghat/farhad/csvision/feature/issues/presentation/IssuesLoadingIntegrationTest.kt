@@ -2,14 +2,19 @@ package deghat.farhad.csvision.feature.issues.presentation
 
 import android.content.Context
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -27,6 +32,7 @@ import deghat.farhad.csvision.feature.issues.data.remote.IssueCsvHttpSource
 import deghat.farhad.csvision.feature.issues.data.remote.createIssueHttpClient
 import deghat.farhad.csvision.feature.issues.domain.IssueRepository
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
@@ -34,6 +40,7 @@ import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -114,6 +121,76 @@ class IssuesLoadingIntegrationTest {
         compose.onNodeWithText("Previous Import").assertDoesNotExist()
         assertGetRequest()
         assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun keepsLoadedRowsVisibleWhileReloadStreamsManyBatches() {
+        runBlocking {
+            database.issueDao().insertBatch((0 until 3_000).map {
+                IssueEntity(it.toLong(), "Previous", "$it", it, 0, "")
+            })
+        }
+        val csv = buildString {
+            appendLine("First name,Sur name,Issue count,Date of birth,avatar")
+            repeat(30_000) {
+                appendLine("Person,$it,5,1978-01-02T00:00:00,https://example.com/avatar.png")
+            }
+        }
+        server.enqueue(
+            MockResponse.Builder()
+                .body(csv)
+                .throttleBody(16_384, 50, TimeUnit.MILLISECONDS)
+                .build()
+        )
+        val completed = AtomicBoolean()
+        val saved = repository
+        repository = object : IssueRepository by saved {
+            override suspend fun reload() {
+                try {
+                    saved.reload()
+                } finally {
+                    completed.set(true)
+                }
+            }
+        }
+        showIssues()
+        waitForText("Previous 0")
+        compose.onNode(hasScrollAction()).performScrollToIndex(900)
+        waitForText("Previous 900")
+        compose.onNode(hasScrollAction()).performScrollToIndex(0)
+        waitForText("Previous 0")
+        val list = compose.onNode(hasScrollAction()).fetchSemanticsNode()
+
+        compose.onNodeWithText("Reload").performClick()
+
+        var sawRecords = false
+        var sampledFrames = 0
+        var placeholderFrames = 0
+        compose.waitUntil(30_000) {
+            compose.runOnUiThread {
+                val texts = visibleTexts(list, list)
+                if (texts.any { it.startsWith("Person ") }) sawRecords = true
+                if (sawRecords) {
+                    sampledFrames++
+                    if (texts.contains("Loading record…")) placeholderFrames++
+                }
+            }
+            completed.get()
+        }
+        waitForText("Reload")
+        waitForText("Person 0")
+        assertTrue("The test must observe loaded records during import", sawRecords && sampledFrames > 5)
+        assertEquals("Loaded rows blinked back to placeholders in $sampledFrames sampled frames", 0, placeholderFrames)
+        assertGetRequest()
+        assertEquals(1, server.requestCount)
+    }
+
+    private fun visibleTexts(node: SemanticsNode, list: SemanticsNode): List<String> {
+        val bounds = node.boundsInRoot
+        val viewport = list.boundsInRoot
+        if (bounds.bottom <= viewport.top || bounds.top >= viewport.bottom) return emptyList()
+        val own = node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
+        return own + node.children.flatMap { visibleTexts(it, list) }
     }
 
     private fun showIssues() {

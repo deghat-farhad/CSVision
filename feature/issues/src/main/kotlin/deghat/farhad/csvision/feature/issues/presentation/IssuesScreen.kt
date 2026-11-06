@@ -1,13 +1,16 @@
 package deghat.farhad.csvision.feature.issues.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
@@ -15,8 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,9 +34,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import deghat.farhad.csvision.feature.issues.R
 import deghat.farhad.csvision.feature.issues.domain.IssueRepository
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 
 @Composable
@@ -49,6 +56,14 @@ private fun IssuesScreen(
     onLoadIssues: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(issues, listState) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.map { it.index } to issues.itemSnapshotList
+        }.collect { (visibleIndices, snapshot) ->
+            visibleIndices.filter { it in 0 until snapshot.size }.forEach { issues[it] }
+        }
+    }
     Surface(modifier = modifier.fillMaxSize()) {
         Column {
             Row(
@@ -87,6 +102,7 @@ private fun IssuesScreen(
                 )
             }
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -94,14 +110,25 @@ private fun IssuesScreen(
                 items(
                     count = issues.itemCount,
                     key = issues.itemKey { it.recordNumber },
-                    contentType = { "issue" }
+                    contentType = issues.itemContentType { "issue" }
                 ) { index ->
-                    val issue = issues[index]
+                    val issue = issues.peek(index)
                     if (issue != null) {
                         IssueRow(issue)
+                    } else {
+                        IssuePlaceholder()
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun IssuePlaceholder() {
+    Card(modifier = Modifier.fillMaxWidth().height(112.dp)) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = stringResource(R.string.issues_record_loading))
         }
     }
 }

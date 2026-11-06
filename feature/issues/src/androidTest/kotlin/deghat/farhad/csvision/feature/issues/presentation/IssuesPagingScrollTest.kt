@@ -23,6 +23,7 @@ import deghat.farhad.csvision.feature.issues.data.local.IssuesDatabase
 import deghat.farhad.csvision.feature.issues.domain.Issue
 import deghat.farhad.csvision.feature.issues.domain.IssueRepository
 import java.util.concurrent.CopyOnWriteArraySet
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -102,8 +103,113 @@ class IssuesPagingScrollTest {
             .config[SemanticsProperties.IndexForKey]
         compose.runOnIdle {
             assertEquals("The first record should have been evicted", -1, indexForKey(0L))
-            assertTrue("No older pages were dropped", indexForKey(before.toLong()) in 0 until before)
+            assertEquals("The visible record must retain its absolute index", before, indexForKey(before.toLong()))
         }
+    }
+
+    @Test
+    fun keepsVisibleRecordsWhenBatchesArriveAfterPageEviction() {
+        assertVisibleRecordsSurviveNewBatches(lastRecordToVisit = 275, jumpToRecord = false)
+    }
+
+    @Test
+    fun keepsVisibleRecordsAtTheLoadedEndWhenMoreBatchesArrive() {
+        assertVisibleRecordsSurviveNewBatches(lastRecordToVisit = 999, jumpToRecord = false)
+    }
+
+    @Test
+    fun keepsVisibleRecordsAfterAFastJumpAndMoreBatchesArrive() {
+        assertVisibleRecordsSurviveNewBatches(lastRecordToVisit = 900, jumpToRecord = true)
+    }
+
+    private fun assertVisibleRecordsSurviveNewBatches(lastRecordToVisit: Int, jumpToRecord: Boolean) {
+        val dao = database.issueDao()
+        fun records(start: Int, end: Int) = (start until end).map {
+            IssueEntity(it.toLong(), "Person", "$it", it, 0, "")
+        }
+        runBlocking { dao.insertBatch(records(0, 1_000)) }
+        val savedIssues = DefaultIssueRepository(
+            dao = dao,
+            importCoordinator = IssueImportCoordinator(dao) { error("Unexpected import") }
+        )
+        val generation = AtomicInteger()
+        val presentedGenerations = CopyOnWriteArraySet<Int>()
+        val repository = object : IssueRepository {
+            override fun observeIssues(): Flow<PagingData<Issue>> = savedIssues.observeIssues().map { page ->
+                val currentGeneration = generation.incrementAndGet()
+                page.map { issue ->
+                    presentedGenerations.add(currentGeneration)
+                    issue
+                }
+            }
+
+            override suspend fun reload() = error("Unexpected reload")
+        }
+        compose.setContent { MaterialTheme { IssuesRoute(repository) } }
+        if (jumpToRecord) {
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Person 0").fetchSemanticsNodes().isNotEmpty()
+            }
+            val generationBeforeJump = generation.get()
+            compose.onNode(hasScrollAction()).performScrollToIndex(lastRecordToVisit)
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Person $lastRecordToVisit").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.waitForIdle()
+            assertEquals(
+                "Fast scrolling must not restart the paging generation",
+                generationBeforeJump,
+                generation.get()
+            )
+        } else {
+            for (recordNumber in 75..lastRecordToVisit step 40) {
+                scrollToRecord(recordNumber)
+            }
+            scrollToRecord(lastRecordToVisit)
+        }
+        val before = visibleRecordNumbers()
+        assertTrue("The viewport must contain records", before.isNotEmpty())
+        if (jumpToRecord) {
+            assertEquals("The fast jump must reach the requested record", lastRecordToVisit, before.first())
+        }
+        val firstRecord = compose.onNodeWithText("Person ${before.first()}")
+        val topBefore = firstRecord.fetchSemanticsNode().boundsInRoot.top
+        assertEquals("The first page must have been evicted", -1, indexForRecord(0))
+
+        repeat(3) { batch ->
+            val previousGeneration = generation.get()
+            val start = 1_000 + batch * 500
+            runBlocking { dao.insertBatch(records(start, start + 500)) }
+            compose.waitUntil(10_000) {
+                generation.get() > previousGeneration && presentedGenerations.contains(generation.get())
+            }
+            compose.waitForIdle()
+
+            assertEquals(
+                "Batch ${batch + 1} changed the stopped viewport",
+                before,
+                visibleRecordNumbers().take(before.size)
+            )
+            assertEquals(
+                "Batch ${batch + 1} moved the visible record",
+                topBefore,
+                firstRecord.fetchSemanticsNode().boundsInRoot.top,
+                1f
+            )
+        }
+    }
+
+    private fun scrollToRecord(recordNumber: Int) {
+        compose.waitUntil(10_000) { indexForRecord(recordNumber) >= 0 }
+        val index = indexForRecord(recordNumber)
+        compose.onNode(hasScrollAction()).performScrollToIndex(index)
+        compose.waitForIdle()
+    }
+
+    private fun indexForRecord(recordNumber: Int): Int {
+        val indexForKey = compose.onNode(hasScrollAction()).fetchSemanticsNode()
+            .config[SemanticsProperties.IndexForKey]
+        return compose.runOnIdle { indexForKey(recordNumber.toLong()) }
     }
 
     private fun visibleRecordNumbers(): List<Int> =

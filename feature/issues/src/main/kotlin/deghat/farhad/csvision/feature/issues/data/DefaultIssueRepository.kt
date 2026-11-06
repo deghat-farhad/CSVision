@@ -17,7 +17,7 @@ internal class DefaultIssueRepository(
     private val pagingConfig: PagingConfig = PagingConfig(
         pageSize = 50,
         initialLoadSize = 50,
-        enablePlaceholders = false,
+        enablePlaceholders = true,
         maxSize = 200
     )
 ) : IssueRepository {

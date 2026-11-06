@@ -4,6 +4,7 @@
     <string name="issues_reload">Reload</string>
     <string name="issues_loading">Loading…</string>
     <string name="issues_loading_description">Loading issues</string>
+    <string name="issues_record_loading">Loading record…</string>
     <string name="issues_retry">Retry</string>
     <string name="issues_load_failed">Loading failed. Any displayed records may be incomplete.</string>
     <string name="issues_count">Issue count: %1$d</string>
