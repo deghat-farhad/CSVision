@@ -1,4 +1,4 @@
- package deghat.farhad.csvision.feature.issues.data
+package deghat.farhad.csvision.feature.issues.data
 
 import deghat.farhad.csvision.feature.issues.data.remote.IssueCsvHttpSource
 import java.io.Reader
